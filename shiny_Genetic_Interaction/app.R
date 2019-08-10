@@ -7,10 +7,10 @@ load("./appdata/VST_normalized_filtered_shiny_new.RData")
 
 #replace Ho by control
 VST_normalized_filtered$LibraryName[VST_normalized_filtered$LibraryName == "HO"] <- "HO(control)"
+
 #VST_normalized_filtered<-rename(VST_normalized_filtered, `Query Mutant`=LibraryName)
 colnames(VST_normalized_filtered)[colnames(VST_normalized_filtered)=="LibraryName"] <- "Query Mutant"
-VST_normalized_filtered <- VST_normalized_filtered %>%
-  mutate(GrowStage = factor(ifelse(GrowStage == "G", "proliferation", "quiescence")))
+
 
 # Multiple plot function
 #
