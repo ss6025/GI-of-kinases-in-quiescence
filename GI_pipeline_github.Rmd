@@ -40,7 +40,7 @@ library(gridExtra)
 library(matrixStats)
 #source("https://bioconductor.org/biocLite.R")
 #biocLite("vsn")
-install_github('sinhrks/ggfortify')
+#install_github('sinhrks/ggfortify')
 library(ggfortify)
 library(devtools)
 library(ggplot2)
@@ -92,14 +92,14 @@ ggsave("./GI_quiescence/sum/plot/Appendix/Appendix_reviewers/FigS1F.pdf", width 
 ###Read in counts files mapped by BARNONE and experiment annotation files
 ```{r}
 #read in files for genenames and features
-YtoGene <- read.table("./GI_quiescence/sum/data/YORFtoGENE_2018")
+YtoGene <- read.table("./sum/data/YORFtoGENE_2018")
 colnames(YtoGene)<-c("Strain","Common")
 #this file can be read in later for gene name and systematic name converting
 
 #set working directory:could be where you have download the package
 datadir <- "./GI_quiescence/Raw data/"
 #read in the colData after adding the new rows for N-lim ho, rim15, pho85 rerun on Mar 2019
-index_file <- read_csv("./GI_quiescence/sum/data/GeneInter.csv")
+index_file <- read_csv("./sum/data/GeneInter.csv")
 
 index_c <- read_csv(paste0(datadir, "C-lim-4mutants/GeneInter_C_lim.csv"))
 
@@ -213,7 +213,7 @@ write.csv(add_filter, "./GI_quiescence/sum/tables/filtered_raw_counts_merged.csv
 ##Figure 1B & Appendix figures 
 ###heatmaps & PCAs
 ```{r}
-add_filter<-read.csv("./GI_quiescence/sum/tables/filtered_raw_counts_merged.csv")[,-1]
+add_filter<-read.csv("./sum/tables/filtered_raw_counts_merged.csv")[,-1]
 
 #assign the first column as row names
 rownames(add_filter) <- add_filter$Strain
@@ -227,6 +227,7 @@ countdata <- countdata+1
 #save filtered countdata
 write_csv(countdata, "./GI_quiescence/sum/tables/QC_countdata.csv")
 
+countdata <- read_csv("./sum/tables/QC_countdata.csv")
 #editing the index_file first to get the common columns representing the same information
 index <- index_file %>%
   unite(Condition, SampleNum, nutrient)#, Replicate)
@@ -300,6 +301,7 @@ VST_lm_prolonged_rep_wtNormalized <- VST_normalized %>%
   dplyr::filter(term == "Days", !is.na(p.value)) %>%
   dplyr::mutate(q.value = qvalue(p.value, fdr.level=0.05, pi0.method="bootstrap")$qvalues)
 
+write_csv(VST_lm_prolonged_rep_wtNormalized, "./sum/tables/Tableforfig1B.csv")
 #plot PCA and heatmap function
 #plot EV1D
 input_table <-VST_lm_prolonged_rep_wtNormalized
@@ -458,7 +460,7 @@ dev.off()
 ##Fitness and survival estimation by linear regression modeling
 #1. fitness estimation for whole growth stage for each replicates (Table S4)
 ```{r}
-add_filter<-read.csv("./GI_quiescence/sum/tables/filtered_raw_counts_merged.csv")[,-1]
+add_filter<-read.csv("./sum/tables/filtered_raw_counts_merged.csv")[,-1]
 
 #assign the first column as row names
 rownames(add_filter) <- add_filter$Strain
@@ -503,8 +505,9 @@ countdata <- add_filter %>%
 #add one for pseudocounts to eleminate the troubles when doing log transformation.
 countdata <- countdata+1
 #save filtered countdata
-write_csv(countdata, "./GI_quiescence/sum/tables/countdata.csv")
+write_csv(countdata, "./sum/tables/countdata.csv")
 
+#countdata <- read_csv("./sum/tables/countdata.csv")
 #editing the index_file first to get the common columns representing the same information
 index <- index_file %>%
   unite(Condition, SampleNum, nutrient)#, Replicate)
@@ -516,6 +519,7 @@ coldata <- subset(coldata, coldata$Condition %in% colnames(countdata))
 # construct the DESeqDataSet object from the matrix of counts and the sample information table:
 ddsMat <- DESeqDataSetFromMatrix(countData = countdata,
                                   colData = coldata, design = ~ LibraryName)
+
 #prefiltering
 keep <- rowSums(counts(ddsMat) >= 4) >= 200
 dds <- ddsMat[keep,]
@@ -546,8 +550,9 @@ colnames(vsd_melt_local)[2]<-"Condition"
 colnames(vsd_melt_local)[1]<-"Strain"
 
 #add info to normalized counts data that merged after VST transformation  
-vsd_melt_in_local <- dplyr::left_join(vsd_melt_local, index, by="Condition") %>% 
-      separate(Condition, c("SampleNum", "nutrient"), "_")
+vsd_melt_in_local <- left_join(vsd_melt_local, index, by="Condition") %>% 
+    
+vsd_melt_in_local <- vsd_melt_in_local %>% separate(Condition, c("SampleNum", "nutrient"), "_")
 
 # dynamics of relative counts normalized to wildtype his3
 tmp_vst<-left_join(vsd_melt_in_local, vsd_melt_in_local %>%
@@ -568,7 +573,7 @@ VST_normalized_filtered$Replicate[VST_normalized_filtered$Replicate =="3" & VST_
 VST_normalized_filtered$nutrient[VST_normalized_filtered$nutrient == "nitrogen.new"] <- "nitrogen"
 
 #save normalized table as TableS3
-write_csv(VST_normalized_filtered, "./GI_quiescence/sum/tables/TableS3.csv")
+write_csv(VST_normalized_filtered, "./sum/tables/TableS3.csv")
 
 ###fitness caculation by linear regression modeling for each replicate during prolonged starvation
 VST_lm_prolonged_rep_wtNormalized_filtered <- VST_normalized_filtered %>%
@@ -582,15 +587,17 @@ VST_lm_prolonged_rep_wtNormalized_filtered <- VST_normalized_filtered %>%
   dplyr::mutate(q.value = qvalue(p.value, fdr.level=0.05, pi0.method="bootstrap")$qvalues)
 
 #save the file with modeling data
-write.csv(VST_lm_prolonged_rep_wtNormalized_filtered, "./GI_quiescence/sum/tables/TableS4.csv")
+write.csv(VST_lm_prolonged_rep_wtNormalized_filtered, "./sum/tables/TableS4.csv")
+
+#VST_lm_prolonged_rep_wtNormalized_filtered <- read_csv("./sum/tables/TableS4.csv")
 
 #plot PCA and heatmap function
 #plot EV1D
 input_table <-VST_lm_prolonged_rep_wtNormalized_filtered
   #reshapte the table for correlation caculation and visulization
   lm_wt_nutrient_corr <- input_table %>% 
-    dplyr::select(nutrient, Strain, LibraryName, Replicate, estimate) %>%
-    spread(key = nutrient, value = estimate) 
+    dplyr::select(nutrient, Strain, LibraryName, Replicate, Rela2WT) %>%
+    spread(key = nutrient, value = Rela2WT) 
 
 #replace the NA values in nitrogen new TOR1 library with the old nitrogen data
   fit_carbon <- lm_wt_nutrient_corr %>% 
@@ -762,7 +769,7 @@ write.csv(VST_lm_prolonged_wtNormalized, "./GI_quiescence/sum/tables/TableS5.csv
 ##Figure 1C: 
 ###caculate the fitness based on all replicates for individual mutant
 ```{r, echo =F}
-VST_normalized_filtered <- read_csv("./GI_quiescence/sum/tables/TableS3.csv")[,-1]
+VST_normalized_filtered <- read_csv("./sum/tables/TableS3.csv")[,-1]
 VST_lm_prolonged_wtNormalized <- read_csv("./GI_quiescence/sum/tables/TableS5csv")[,-1]
 #function to plot individual mutant's fitness changes over time 
 individual_plot <- function(df, gene, fitness){
@@ -947,7 +954,7 @@ write.csv(VST_lm_stages_wtNormalized, "./GI_quiescence/sum/tables/TableS7.csv")
 
 ###Figure 1B_reviewer & Appendix figures 20191107
 ```{r}
-VST_lm_stage_wtNormalized_filtered <- read_csv("./GI_quiescence/sum/tables/TableS7.csv")[,-1]
+VST_lm_stage_wtNormalized_filtered <- read_csv("./sum/tables/TableS7.csv")[,-1]
 
 VST_lm_stage_wtNormalized_filtered %>% 
   ggplot(aes(x=estimate, col= GrowStage, fill=GrowStage)) +
@@ -1029,16 +1036,110 @@ anno_colors <- list(nutrient = nutrient_col, Library = library_col, growstage =g
 #replace nitrogen.new with nitrogen
 pheatmap(as.matrix(fit_all[,c(2:length(fit_all[,]))]), annotation_col = annotation, annotation_colors = anno_colors)#,
 
-cormat_fitness <- round(cor(as.matrix(fit_all[,c(2,4,6,8,10,12,14,16,18,20,22,24,3,5,7,9,11,13,15,17,19,21,23,25)])),1)
+cormat_fitness <- round(cor(as.matrix(fit_all[,c(2,4,6,8,10,12,14,16,18,20,22,24,3,5,7,9,11,13,15,17,19,21,23,25)])),2)
 
-write.csv(cormat_fitness, "./GI_quiescence/sum/tables/TableEV5.csv")
+cormat_fitness_pro <- round(cor(as.matrix(fit_all[,c(2,4,6,8,10,12,14,16,18,20,22,24)])),2)
+
+cormat_fitness_qui <- round(cor(as.matrix(fit_all[,c(3,5,7,9,11,13,15,17,19,21,23,25)])),2)
+
+write.csv(cormat_fitness, "./sum/tables/TableEV5.csv")
 # Print the correlation heatmap
-ggcorrplot(cormat_fitness,  method = "square", hc.method = "complete",  
-           hc.order = FALSE, outline.col = "white",
-           colors = c("#FF9933", "white", "#0066CC"), type = "full")
-ggsave("./GI_quiescence/sum/reviewer/cormap_both.pdf", width = 8, height = 8)
+ggcorrplot(cormat_fitness_pro,  method = "square", hc.method = "complete",  show.diag = TRUE, lab = TRUE, lab_size = 3,
+           hc.order = FALSE, outline.col = "white", type = "upper")+
+  scale_fill_gradient2(low = "#FF9933", high = "#0066CC", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+    name="Pearson\nCorrelation") +
+theme(
+  axis.text.x = element_text(color = "grey20", size = 10),
+  axis.text.y = element_text(color = "grey20", size = 10),
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(1, 0.1),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "bottom", title.hjust = 0.5))
+ggsave("./sum/reviewer/Fig1E_pro.pdf", width = 6, height = 6)
+
+ggcorrplot(cormat_fitness_qui,  method = "square", hc.method = "complete",  show.diag = TRUE, lab = TRUE, lab_size = 3,
+           hc.order = FALSE, outline.col = "white", type = "lower")+
+  scale_fill_gradient2(low = "#FF9933", high = "#0066CC", mid = "white", 
+   midpoint = 0, limit = c(-1,1), space = "Lab", 
+    name="Pearson\nCorrelation") +
+theme(
+  axis.text.x = element_text(color = "grey20", size = 10),
+  axis.text.y = element_text(color = "grey20", size = 10),
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  legend.justification = c(1, 0),
+  legend.position = c(0.6, 0.7),
+  legend.direction = "horizontal")+
+  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
+                title.position = "top", title.hjust = 0.5))
+ggsave("./sum/reviewer/Fig1E_qui.pdf", width = 6, height = 6)
+
+#col1 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "white","cyan", "#007FFF", "blue","#00007F"))
+col2 <- colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582","#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC", "#053061"))
+#col4 <- colorRampPalette(c("#7F0000", "red", "#FF7F00", "yellow", "#7FFF7F","cyan", "#007FFF", "blue", "#00007F"))
+
+pdf("./sum/reviewer/Fig1E_new.pdf", width = 11, height = 11, useDingbats=FALSE)
+corrplot(cormat_fitness, type = "full",
+         tl.col = "black", tl.srt = 45, col = col2(10))
+dev.off()
+
+pdf("./sum/reviewer/Fig1E_pro_new.pdf", width = 8, height = 6, useDingbats=FALSE)
+corrplot(cormat_fitness_pro, type = "lower",
+         tl.col = "black", tl.srt = 45,col = col2(10))
+dev.off()
+
+pdf("./sum/reviewer/Fig1E_qui_new.pdf", width = 8, height = 6, useDingbats=FALSE)
+corrplot(cormat_fitness_qui, type = "upper",
+         tl.col = "black", tl.srt = 45,col = col2(10))
+dev.off()
+
+#####negative correlation examples
+##GI profiels differ between cell types
+names(fit_all) <- c("Starin","HO_Pro(-C)","HO_Qui(-C)","PHO85_Pro(-C)","PHO85_Qui(-C)","RIM15_Pro(-C)","RIM15_Qui(-C)","TOR1_Pro(-C)","TOR1_Qui(-C)","HO_Pro(-N)","HO_Qui(-N)","PHO85_Pro(-N)","PHO85_Qui(-N)","RIM15_Pro(-N)","RIM15_Qui(-N)","TOR1_Pro(-N)","TOR1_Qui(-N)","HO_Pro(-P)","HO_Qui(-P)","PHO85_Pro(-P)","PHO85_Qui(-P)","RIM15_Pro(-P)","RIM15_Qui(-P)","TOR1_Pro(-P)","TOR1_Qui(-P)")
+pdf("./sum/reviewer/FigEV2A_new.pdf", width = 20, height = 20)
+ggpairs(as.matrix(fit_all[,c(2,4,6,8,10,12,14,16,18,20,22,24,3,5,7,9,11,13,15,17,19,21,23,25)]),
+        mapping = ggplot2::aes(),
+        #params=list(corSize=12),
+        upper = list(continuous = wrap("cor", alpha = 1), combo = "box_no_facet"),
+        lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.2, size = 0.5, col = "pink"))
+        #title = "GI profile comparison for quiescent cells starved fro phosphate"
+        )+
+  theme(text=element_text(size=9))
+dev.off()
+
+pdf("./sum/reviewer/FigEV2A_new_pro.pdf", width = 10, height = 10)
+ggpairs(as.matrix(fit_all[,c(2,4,6,8,10,12,14,16,18,20,22,24)]),
+        mapping = ggplot2::aes(),
+        #params=list(corSize=12),
+        upper = list(continuous = wrap("cor", alpha = 1), combo = "box_no_facet"),
+        lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.2, size = 0.5, col = "pink")))+
+  theme(text=element_text(size=9))
+dev.off()
+
+pdf("./sum/reviewer/FigEV2A_new_qui.pdf", width = 10, height = 10)
+ggpairs(as.matrix(fit_all[,c(3,5,7,9,11,13,15,17,19,21,23,25)]),
+        mapping = ggplot2::aes(),
+        #params=list(corSize=12),
+        upper = list(continuous = wrap("cor", alpha = 1), combo = "box_no_facet"),
+        lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.2, size = 0.5, col = "pink")))+
+  theme(text=element_text(size=9))
+dev.off()
+```
 
 #make scatter plot to support the claim that fitness profiles in mutant libraries are more distinct to nitrgoen and phosphorous
+```{r}
 VST_lm_wtNormalized_filtered <- read_csv("./GI_quiescence/sum/tables/TableS5.csv")[,-1]
 melt_tb <- VST_lm_wtNormalized_filtered %>% 
   dplyr::select(nutrient, Strain, LibraryName, estimate) %>%
@@ -1211,10 +1312,10 @@ ggsave("./GI_quiescence/sum/plot/Fig2A.pdf", width = 7, height = 4)
 
 ##Figure2B & Figure S2B&S2C
 ```{r}
-YtoGene <- read.table("./GI_quiescence/sum/data/YORFtoGENE_2018")
+YtoGene <- read.table("./sum/data/YORFtoGENE_2018")
 colnames(YtoGene) <- c("Strain","Common")
 
-VST_lm_stages<-read_csv("./GI_quiescence/sum/tables/TableS7.csv")[,-1]
+VST_lm_stages<-read_csv("./sum/tables/TableS7.csv")[,-1]
 VST_lm_stages<-left_join(VST_lm_stages, YtoGene, by = "Strain")
 
 fitness_diff_QC_HO <- read_csv("./GI_quiescence/sum/tables/TableS8.csv")[,-1]
@@ -1241,7 +1342,7 @@ fitness_G_S_diff_HO_byRow <- bind_rows(fitness_growing_HO, fitness_starved_HO, f
 
 #save tables for fitness estimation in proliferation, survival in quiescence and phenotypic difference between proliferation and quiescecne.
 #TableS9: Fitness/survival and phenotypic difference in one same table. Original table for FigS2C.
-write_csv(fitness_G_S_diff_HO_byRow, "./GI_quiescence/sum/tables/TableS9.csv")
+write_csv(fitness_G_S_diff_HO_byRow, "./sum/tables/TableS9.csv")
 
 #Figure 2SC
 #violen plot for fitness distribution
@@ -1294,7 +1395,7 @@ tmp %>%
   scale_color_brewer(palette="Reds") +
   theme_classic2()
   
-ggsave("./GI_quiescence/sum/plot/FigS2B.pdf", width = 9, height = 7)
+ggsave("./sum/plot/FigS2B.pdf", width = 9, height = 7)
 
 #genes for entering, maintaining, exiting from Quiescence 
 #opt2:#lm and ancova's pval is cutted at 0.05,with either positive or negative fitness selection
@@ -1310,16 +1411,16 @@ QC_required_fig2 <- QC_required %>%
 
 #Save file for genes that are required for maintaining viability in quiescence under different conditions. 
 #Table10: Quiescent specific genes across different conditions. Original data for Fig2C
-write_csv(QC_required_fig2, "./GI_quiescence/sum/tables/TableS10.csv")
+write_csv(QC_required_fig2, "./sum/tables/TableS10.csv")
 
 
 carbon_qc_required <- QC_required_fig2 %>% filter(nutrient == "carbon") %>% dplyr::select (Systematic) 
 nitrogen_qc_required<-QC_required_fig2 %>% filter(nutrient == "nitrogen") %>% dplyr::select (Systematic)  
 phosphate_qc_required<-QC_required_fig2 %>% filter(nutrient == "phosphate") %>% dplyr::select (Systematic)
 
-write_csv(carbon_qc_required, "./GI_quiescence/sum/tables/TableEV8a.csv")
-write_csv(nitrogen_qc_required, "./GI_quiescence/sum/tables/TableEV8b.csv")
-write_csv(phosphate_qc_required, "./GI_quiescence/sum/tables/TableEV8c.csv")
+write_csv(carbon_qc_required, "./sum/tables/TableEV8a.csv")
+write_csv(nitrogen_qc_required, "./sum/tables/TableEV8b.csv")
+write_csv(phosphate_qc_required, "./sum/tables/TableEV8c.csv")
 
 #hypergeometric test
 #Exact Test of Multi-Set Intersections
@@ -1340,7 +1441,7 @@ print(paste0("QS genes in each condition and across conditions: carbon-",length(
 #draw a venn diagram
 library(VennDiagram)
 
-pdf("./GI_quiescence/sum/plot/Fig2D_raw.pdf")
+pdf("./sum/plot/Fig2D_raw.pdf")
 grid.newpage()
 draw.triple.venn(area1 = length(carbon_qc_required$Systematic), area2 = length(nitrogen_qc_required$Systematic), area3 = length(phosphate_qc_required$Systematic), n12 = length(cn_qc_required), n13 =length(cp_qc_required), n23 = length(np_qc_required), n123 = length(cnp_qc_required), euler.d = TRUE, category = c("Carbon", "Nitrogen", "Phosphate"), lty = "blank", fill = c("skyblue", "pink1", "mediumorchid"))
 dev.off()
@@ -1350,13 +1451,13 @@ dev.off()
 #QS genes
 QS <- fitness_G_S_diff_HO_byRow %>% filter(Systematic %in% cnp_qc_required)
 #TableS11: Original data for FigS2D
-write_csv(QS, "./GI_quiescence/sum/tables/TableS11.csv")
+write_csv(QS, "./sum/tables/TableS11.csv")
 ```
 
 ##FigureS2E
 ```{r}
 #select the essential part for heatmap & save in a dataframe
-core_set <- read_csv("./GI_quiescence/sum/tables/TableS11.csv")
+core_set <- read_csv("./sum/tables/TableS11.csv")
 
 common_genes <- core_set %>%
   filter(GrowStage %in% c("Qui","Pro")) %>%
@@ -1403,15 +1504,15 @@ keytypes(org.Sc.sgd.db)
 
 #read in related files
 # GOSlim annotation table
-read_tsv("./GI_quiescence/sum/data/sgd_go_slim_171013.txt",col_names=FALSE,
+read_tsv("./sum/data/sgd_go_slim_171013.txt",col_names=FALSE,
   comment="!") -> SGDGOSlim
 
 # Full GO annotation table
-read_tsv("./GI_quiescence/sum/data/sgd_go_full_171013.txt",col_names=FALSE,
+read_tsv("./sum/data/sgd_go_full_171013.txt",col_names=FALSE,
   comment="!") -> SGDGOFull
 
 # Go terms look up table
-read_tsv("./GI_quiescence/sum/data/sgd_go_terms_171013.txt",col_names=FALSE,
+read_tsv("./sum/data/sgd_go_terms_171013.txt",col_names=FALSE,
   comment="!") %>%
   mutate(GOID=str_c("GO:"
     ,str_pad(string=X1,width=7,side="left",pad="0"))
@@ -1514,6 +1615,80 @@ for (i in c("ALL","BP","CC","MF")) {
     arrange(Variable,-enrichmentScore)
   gseGOtable %>% write_csv(path=paste0("./GI_quiescence/sum/GO_term/TableS10_gseGO_changed_",i,".csv"), append=T, col_names = T)
 }
+```
+
+##Gene Set Enrichment Analysis of gene list ranked by fitness and survival in different nutritional starvations
+```{r}
+#load minima theme as the default theme
+theme_set(theme_minimal())
+
+VST_lm_stages<-read_csv("./sum/tables/TableS7.csv")[,-1]
+VST_lm_stages<-left_join(VST_lm_stages, YtoGene, by = "Strain")
+
+#select HO mutant library and constuct the matrix for applying GSEA
+datar <- VST_lm_stages %>%
+  filter(LibraryName == "HO") %>%
+  dplyr::select(nutrient, Strain, GrowStage, estimate) %>%
+  dplyr::rename(Systematic = Strain) %>%
+  unite(cond, nutrient, GrowStage) %>%
+  spread(key = cond,value = estimate) 
+
+# SET THE DESIRED ORGANISM HERE
+#BiocManager::install(organism, character.only = TRUE)
+#library("org.Sc.sgd.db", character.only = TRUE)
+
+# A list for results holding
+gseGOResults <- list() 
+gseGOtable <- ""
+  for (varz in c("carbon_Pro","carbon_Qui","nitrogen_Pro","nitrogen_Qui","phosphate_Pro","phosphate_Qui")) {
+    # we want the fitness and suvival rate
+    original_gene_list <- datar %>% pull(varz)
+    # name the vector
+    names(original_gene_list) <- datar$Systematic
+    # omit any NA values 
+    gene_list<-na.omit(original_gene_list)
+    # sort the list in decreasing order (required for clusterProfiler)
+    gene_list = sort(gene_list, decreasing = TRUE)
+    tmp <- clusterProfiler::gseGO(geneList=gene_list, 
+             ont ="MF", 
+             keyType = "ENSEMBL", 
+             nPerm = 1000, 
+             minGSSize = 5, 
+             maxGSSize = 800, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Sc.sgd.db", 
+             pAdjustMethod = "none")
+    
+    tmp2 <- simplify(tmp, cutoff=0.4, by="p.adjust", select_fun=min)
+    
+    gseGOResults[[varz]] <- tmp2@result %>% 
+      as_tibble() %>% 
+      mutate(Variable=varz)
+      }
+  gseGOtable <- bind_rows(gseGOResults) %>% as_tibble %>% 
+    # First we bind rows and make it a tibble
+    dplyr::select(Variable,ID,Description, setSize, enrichmentScore, NES, p.adjust,rank, pvalue, core_enrichment) %>%
+    # Then we pick the variables we want
+    arrange(Variable,-enrichmentScore)
+  
+gseGOtable %>% write_csv(path=paste0("./sum/reviewer/gseGO_fitness_survival_MF.csv"), append=T, col_names = T)
+  
+gseGOtable <- read_csv("./sum/reviewer/gseGO_fitness_survival_MF.csv")
+  gseGOtable %>%
+  filter(p.adjust < 0.01) %>%
+  ggplot(aes(x = Variable, y =  reorder(Description, enrichmentScore), color = enrichmentScore, size =  setSize)) +
+  geom_point(aes(size = setSize)) +
+  scale_size_continuous(range = c(4, 10)) + 
+    theme(text = element_text(size = 15)) +
+  ggtitle("Molecular Function (pvalue<0.01)")+
+  xlab("")+
+  ylab("")+
+  scale_colour_gradient2(low = "blue", mid = "white", high = "red") +
+  theme(axis.text = element_text(face = "bold", color = "black", size = 30))+
+  theme(text = element_text(size=45),axis.text.x=element_text(angle=90),legend.position="right") +
+  theme_minimal()
+  ggsave("./sum/reviewer/GSEA_fitness_survival_MF.pdf",useDingbats=FALSE, width = 7, height= 6)
 ```
 
 ##Figure 2C
@@ -1693,7 +1868,7 @@ dev.off()
 ##GI (ANCOVA) analysis for mutants in different growth stages
 ```{r include=FALSE}
 # read in the dataframe after filtered out HO rep2 and RIM15 rep2 and renamed the replicates number
-VST_normalized_filtered <- read_csv("./GI_quiescence/sum/tables/TableS3.csv")
+VST_normalized_filtered <- read_csv("./sum/tables/TableS3.csv")
 
 #save fitness and interaction score generated by ANCOVA for each strain within the same file
 sub_libraries_GI<-function (master_df, ddf){
@@ -1735,6 +1910,7 @@ GI_VST_all_wtNormed <- bind_rows(GI_VST[[1]], GI_VST[[2]], GI_VST[[3]])
 #TableS13: Genetic interaction quantification by ANCOVA using different phenotypic readout for proliferation and quiescence. 
 write.csv(GI_VST_all_wtNormed, "./GI_quiescence/sum/tables/TableS13.csv")
 ```
+
 
 ##GI (ANCOVA) analysis for mutants during whole growth stages
 ```{r include=FALSE}
@@ -1858,8 +2034,8 @@ ggsave(paste0(path,"Fig3B.pdf"),width=12,height=4)
 ###Figure 3C & FigureS3B & appendix_Figures associated with Figure 3 --- RIM15
 ```{r}
 #####################################Comparison for stage starvation##############################################
-GI_VST_all_wtNormed <- read_csv ("./GI_quiescence/sum/tables/TableS13.csv")[,-1]
-VST_lm_stage_wtNormed <- read_csv("./GI_quiescence/sum/tables/TableS7.csv")[,-1]
+GI_VST_all_wtNormed <- read_csv ("./sum/tables/TableS13.csv")[,-1]
+VST_lm_stage_wtNormed <- read_csv("./sum/tables/TableS7.csv")[,-1]
 
 #RIM15: select rim15 from HO library and caculate the expected fitness based on additive model: fitness of rim15 + all the other single mutants in ho library
 ho_rim15 <- inner_join(
@@ -1902,7 +2078,7 @@ RIM15 <- left_join(rim15_comparison, YtoGene, by = "Strain") %>%
                                   q.value.ancova > 0.05 ~ "neutral in ancova"))
 
 #TableS15: Genetic interaction data for Kinase RIM15. This table includes: single mutant fitness, double mutant fitness, expected double mutant fitness based on mutiplicative model, and the corresponding statistical values for each model.
-write_csv(RIM15, "./GI_quiescence/sum/tables/TableS15.csv")
+write_csv(RIM15, "./sum/tables/TableS15.csv")
 
 RIM15_Sig <- RIM15 %>%
    dplyr::filter(type.ancova %in% c("pos.sig in ancova", "neg.sig in ancova"))
@@ -1922,7 +2098,7 @@ ggscatter(RIM15, x = "ancova.gis", y = "add.gis", alpha = 0.2, size=1.2,
   scale_fill_manual(values=c("#FFA500", "#7ACE0D", "#A564F9"))+
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0),
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/Appendix_Figure3A.pdf" , width = 7, height = 5)
+ggsave("./sum/plot/Appendix_Figure3A.pdf" , width = 7, height = 5)
 
 #scatter plot of the double and sigle mutant comparison
 ggscatter(RIM15 %>% filter(nutrient == "phosphate"), x = "estimate.single", y = "estimate.double", alpha = 0.7, size=0.7, 
@@ -1941,7 +2117,7 @@ ggscatter(RIM15 %>% filter(nutrient == "phosphate"), x = "estimate.single", y = 
   scale_fill_manual(values=c("#3399FF", "darkgrey", "#FFCC33")) +
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/Fig3C.pdf", width = 8, height = 5)
+ggsave("./sum/plot/Fig3C.pdf", width = 8, height = 5)
 
 #scatter plot of the double and sigle mutant comparison
 ggscatter(RIM15, x = "estimate.single", y = "estimate.double", alpha = 0.7, size=0.7, 
@@ -1960,7 +2136,7 @@ ggscatter(RIM15, x = "estimate.single", y = "estimate.double", alpha = 0.7, size
   scale_fill_manual(values=c("#3399FF", "darkgrey", "#FFCC33")) +
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/FigS3B.pdf", width = 7, height = 7)
+ggsave("./sum/plot/FigS3B.pdf", width = 7, height = 7)
 
 #check whether the significant positive ones have low single mutant fitness?
 ggscatter(RIM15 %>%
@@ -2004,10 +2180,108 @@ ggscatter(RIM15, x = "add.exp", y = "estimate.double", alpha = 0.2, size=1, cor.
     ggtitle("RIM15") +
     geom_smooth(aes(col = nutrient), method = "lm", se = FALSE, size = 0.7)+
     facet_grid(~GrowStage, scale = "free") +
-    stat_cor(aes(col = nutrient), method = "pearson", label.x.npc = "left", label.y.npc = "top", size=4) +
-    scale_color_manual(values=c("#FFA500", "#7ACE0D", "#A564F9")) +
-    scale_fill_manual(values=c("#FFA500", "#7ACE0D", "#A564F9")) +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
     theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=90), axis.title=element_text(size=12,face="bold")) 
+
+#comparision between single and GI
+ggscatter(RIM15, x = "estimate.single", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in single array mutant") +
+  ylab("GIS") +
+  ggtitle("RIM15") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4E_RIM15single_reviewer.pdf", width = 8, height = 5)
+
+#comparision between single and GI
+ggscatter(RIM15, x = "estimate.double", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in double mutant") +
+  ylab("GIS by ANCOVA") +
+  ggtitle("RIM15") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4F_RIM15double_reviewer.pdf", width = 8, height = 5)
+
+ggscatter 
+```
+
+#check whether the model has a larger variance as the fitness/slope becomes extrem
+```{r}
+VST_lm_stage_wtNormed <- read_csv("./sum/tables/TableS7.csv")[,-1]
+
+#Overall "#3399FF", "darkgrey", "#FFCC33"
+ggplot(VST_lm_stage_wtNormed, aes(estimate, std.error), group = "LibraryName", col = "LibraryName") +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value > 0.05), color ="darkgrey",alpha = 1/3, size = 0.5) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05, estimate > 0), color = ("#FFCC33"), alpha = 1/3, size = 0.5)+
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05, estimate < 0), color = ("#3399FF"), alpha = 1/3, size = 0.5)+
+  theme_classic() +
+  geom_smooth(col = "#333333", size = 0.4)+
+  facet_grid(nutrient+LibraryName~GrowStage) +
+  xlab(expression("Fitness or survival rate")) +
+  ylab(expression("Standard error")) +
+  theme(plot.title = element_text(hjust = 0.5, size = 4), axis.title = element_text(size = 8), axis.text = element_text(size = 8, colour = "black"), text = element_text(size=8))
+ggsave("./sum/reviewer/FigEV6.pdf", width = 4, height = 6)
+```
+
+#check the relationship between pval and std
+```{r}
+VST_lm_stage_wtNormed <- read_csv("./sum/tables/TableS7.csv")[,-1]
+
+ggplot(VST_lm_stage_wtNormed %>% filter(LibraryName == "HO"), aes(estimate, -log10(q.value))) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value > 0.05), color ="grey",alpha = 1/4) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05), color = ("#E5C494"), alpha = 1/4)+
+  theme_classic() +
+    facet_grid(nutrient~GrowStage, scale = "free") +
+  xlab(expression("Fitness or survival rate")) +
+  ylab(expression(-Log[10]*adj.P)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 14), axis.title = element_text(size = 12), axis.text = element_text(size = 10, colour = "black"))
+
+ggplot(VST_lm_stage_wtNormed %>% filter(LibraryName == "TOR1"), aes(estimate, -log10(q.value))) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value > 0.05), color ="grey",alpha = 1/4) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05), color = ("#66C2A5"), alpha = 1/4)+
+  theme_classic() +
+    facet_grid(nutrient~GrowStage, scale = "free") +
+  xlab(expression("Fitness or survival rate")) +
+  ylab(expression(-Log[10]*adj.P)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 14), axis.title = element_text(size = 12), axis.text = element_text(size = 10, colour = "black"))
+
+ggplot(VST_lm_stage_wtNormed %>% filter(LibraryName == "RIM15"), aes(estimate, -log10(q.value))) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value > 0.05), color ="grey",alpha = 1/4) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05), color = ("#E78AC3"), alpha = 1/4)+
+  theme_classic() +
+    facet_grid(nutrient~GrowStage, scale = "free") +
+  xlab(expression("Fitness or survival rate")) +
+  ylab(expression(-Log[10]*adj.P)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 14), axis.title = element_text(size = 12), axis.text = element_text(size = 10, colour = "black"))
+
+ggplot(VST_lm_stage_wtNormed %>% filter(LibraryName == "PHO85"), aes(estimate, -log10(q.value))) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value > 0.05), color ="grey",alpha = 1/4) +
+  geom_point(data = filter(VST_lm_stage_wtNormed, q.value < 0.05), color = ("#8DA0CB"), alpha = 1/4)+
+  theme_classic() +
+    facet_grid(nutrient~GrowStage, scale = "free") +
+  xlab(expression("Fitness or survival rate")) +
+  ylab(expression(-Log[10]*adj.P)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 14), axis.title = element_text(size = 12), axis.text = element_text(size = 10, colour = "black"))
 ```
 
 ###FigureS3A & appendix_Figures associated with Figure 3 --- TOR1
@@ -2050,7 +2324,7 @@ TOR1 <- left_join(tor1_comparison, YtoGene, by = "Strain") %>%
                                   q.value.ancova > 0.05 ~ "neutral in ancova"))
 
 #TableS16: Genetic interaction data for Kinase TOR1 This table includes: single mutant fitness, double mutant fitness, expected double mutant fitness based on mutiplicative model, and the corresponding statistical values for each model.
-write_csv(TOR1, "./GI_quiescence/sum/tables/TableS16.csv")
+write_csv(TOR1, "./sum/tables/TableS16.csv")
 
 TOR1_Sig <- TOR1 %>%
    dplyr::filter(type.ancova %in% c("pos.sig in ancova", "neg.sig in ancova"))
@@ -2070,7 +2344,7 @@ ggscatter(TOR1, x = "ancova.gis", y = "add.gis", alpha = 0.2, size=1.2,
   scale_fill_manual(values=c("#FFA500", "#7ACE0D", "#A564F9"))+
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0),
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/FigS3A.pdf", width = 7, height = 4.5)
+ggsave("./sum/plot/FigS3A.pdf", width = 7, height = 4.5)
 
 #TOR1
 ggscatter(TOR1 %>%
@@ -2107,7 +2381,7 @@ ggscatter(TOR1, x = "estimate.single", y = "estimate.double", alpha = 0.5, size=
   scale_fill_manual(values=c("#3399FF", "darkgrey", "#FFCC33")) +
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/Appendix_Figure3B.pdf", width = 7, height = 7)
+ggsave("./sum/plot/Appendix_Figure3B.pdf", width = 7, height = 7)
 
 #scatter plot of the expected fitness and observed fitness in double mutant library
 ggscatter(TOR1, x = "add.exp", y = "estimate.double", alpha = 0.2, size=1, cor.coef.size = 0.3, col= "nutrient") +
@@ -2120,6 +2394,42 @@ ggscatter(TOR1, x = "add.exp", y = "estimate.double", alpha = 0.2, size=1, cor.c
     scale_color_manual(values=c("#FFA500", "#7ACE0D", "#A564F9")) +
     scale_fill_manual(values=c("#FFA500", "#7ACE0D", "#A564F9")) +
     theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=90), axis.title=element_text(size=12,face="bold")) 
+
+#comparision between single and GI
+ggscatter(TOR1, x = "estimate.single", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in single array mutant") +
+  ylab("GIS") +
+  ggtitle("TOR1") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4_TOR1single_reviewer.pdf", width = 8, height = 5)
+
+#comparision between single and GI
+ggscatter(TOR1, x = "estimate.double", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in double mutant") +
+  ylab("GIS") +
+  ggtitle("TOR1") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4_TOR1double_reviewer.pdf", width = 8, height = 5)
 ```
 
 ###FigureS3C & appendix_Figures associated with Figure 3 --- PHO85
@@ -2162,7 +2472,7 @@ PHO85 <- left_join(pho85_comparison, YtoGene, by = "Strain") %>%
                                   q.value.ancova > 0.05 ~ "neutral in ancova"))
 
 #TableS17: Genetic interaction data for Kinase PHO85. This table includes: single mutant fitness, double mutant fitness, expected double mutant fitness based on mutiplicative model, and the corresponding statistical values for each model.
-write_csv(PHO85, "./GI_quiescence/sum/tables/TableS17.csv")
+write_csv(PHO85, "./sum/tables/TableS17.csv")
 
 PHO85_Sig <- PHO85 %>%
    dplyr::filter(type.ancova %in% c("pos.sig in ancova", "neg.sig in ancova"))
@@ -2218,9 +2528,111 @@ ggscatter(PHO85, x = "estimate.single", y = "estimate.double", alpha = 0.7, size
   scale_fill_manual(values=c("#3399FF", "darkgrey", "#FFCC33")) +
   theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
         axis.title=element_text(size=12,face="bold")) 
-ggsave("./GI_quiescence/sum/plot/Appendix_Figure3C.pdf", width = 7, height = 7)
+ggsave("./sum/plot/Appendix_Figure3C.pdf", width = 7, height = 7)
+
+#comparision between single and GI
+ggscatter(PHO85, x = "estimate.single", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in single array mutant") +
+  ylab("GIS") +
+  ggtitle("PHO85") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4_PHO85single_reviewer.pdf", width = 8, height = 5)
+
+#comparision between single and GI
+ggscatter(PHO85, x = "estimate.double", y = "ancova.gis", alpha = 0.7, size=0.7, 
+          cor.coef.size = 0.3, col= "type.ancova") +
+  xlab("Fitness in double mutant") +
+  ylab("GIS") +
+  ggtitle("PHO85") +
+  facet_grid(nutrient~GrowStage) +
+  ylim(-0.5,0.5) +
+  xlim(-0.5,0.5) +
+  facet_grid(nutrient~GrowStage, scale = "free") +
+  geom_hline(yintercept=0, linetype="dashed", col="darkgrey") +
+  geom_vline(xintercept=0, linetype="dashed", col="darkgrey") +
+  scale_color_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  scale_fill_manual(values=c("#3399FF", "grey", "#FFCC33")) +
+  theme(axis.text=element_text(size=12), axis.text.x=element_text(angle=0), 
+        axis.title=element_text(size=12,face="bold")) 
+ggsave("./sum/reviewer/FigEV4_PHO85double_reviewer.pdf", width = 8, height = 5)
 ```
 
+#reply to Reviwer#1 02192020
+##save data sets for SAFE analysis on Single, double mutant fitness and GIS-add
+```{r}
+#isolate and safe dataset for SAFE analysis on single, double and GIS-add
+#Data preparation for SAFE annotation
+path = "./sum/"
+
+tmp<-bind_rows(RIM15, TOR1, PHO85)
+
+#single mutant fitness a loop to save all files in each catagory
+for (s in c("Pro", "Qui")){
+  for (n in c("carbon","nitrogen","phosphate")){
+    for (q in c("TOR1","RIM15","PHO85")){ 
+      tmp %>% 
+        filter(nutrient == n & LibraryName == q & GrowStage == s) %>%
+        dplyr::select(Strain, estimate.single, p.value.single, q.value.single, LibraryName) %>%
+        dplyr::rename(ORF = Strain, GIS = estimate.single, Query = LibraryName) %>%
+        write.csv(.,file = paste0(path,"safe_single/",s,"/",n,"/",q,"_single.csv"), row.names = FALSE)
+      
+      tmp %>% 
+        filter(nutrient == n & LibraryName == q & GrowStage == s) %>%
+        dplyr::select(Strain, estimate.double, p.value.double, q.value.double, LibraryName) %>%
+        dplyr::rename(ORF = Strain, GIS = estimate.double, Query = LibraryName) %>%
+        write.csv(.,file = paste0(path,"safe_double/",s,"/",n,"/",q,"_double.csv"), row.names = FALSE)
+      
+      tmp %>% 
+        filter(nutrient == n & LibraryName == q & GrowStage == s) %>%
+        dplyr::select(Strain, add.gis, std.error.add.gis, LibraryName) %>%
+        dplyr::rename(ORF = Strain, GIS = add.gis, Query = LibraryName) %>%
+        write.csv(.,file = paste0(path,"safe_add_gis/",s,"/",n,"/",q,"_add_gis.csv"), row.names = FALSE)
+      }
+  }
+}
+```
+
+#reply to Reviwer#1 02192020
+##Only apply safe to the statistically significant interacting genes
+```{r}
+#isolate and safe dataset for SAFE analysis on single, double and GIS-add
+#Data preparation for SAFE annotation
+path = "./sum/"
+
+#isolate the useful columns and change non significant GIS into 0, so that those insignificant ones will not be considered in SAFE analysis
+RIM15_sig <- RIM15 %>% select(nutrient, Strain, GrowStage, ancova.gis, LibraryName, type.ancova) %>% mutate(ancova.gis = ifelse(type.ancova == "neutral in ancova",  0, ancova.gis))
+  
+TOR1_sig <- TOR1 %>% select(nutrient, Strain, GrowStage, ancova.gis, LibraryName, type.ancova) %>% mutate(ancova.gis = ifelse(type.ancova == "neutral in ancova",  0, ancova.gis))
+
+PHO85_sig <- PHO85 %>% select(nutrient, Strain, GrowStage, ancova.gis, LibraryName, type.ancova) %>% mutate(ancova.gis = ifelse(type.ancova == "neutral in ancova",  0, ancova.gis))
+  
+tmp<-bind_rows(RIM15_sig, TOR1_sig, PHO85_sig)
+
+#single mutant fitness a loop to save all files in each catagory
+for (s in c("Pro", "Qui")){
+  for (n in c("carbon","nitrogen","phosphate")){
+    for (q in c("TOR1","RIM15","PHO85")){ 
+      tmp %>% 
+        filter(nutrient == n & LibraryName == q & GrowStage == s) %>%
+        dplyr::select(Strain, ancova.gis, LibraryName) %>%
+        dplyr::rename(ORF = Strain, GIS = ancova.gis, Query = LibraryName) %>%
+        write.csv(.,file = paste0(path,"safe_sig/",s,"/",n,"/",q,"_sig_gis.csv"), row.names = FALSE)
+      }
+  }
+}
+```
+
+#reply to Reviwer#1 11252019
 ###Gene Set Enrichment Analysis for GI profiles of TOR1,RIM15 caculated by different modeling.
 ```{r}
 RIM15<-read_csv("./GI_quiescence/sum/tables/TableS15.csv")
@@ -2300,7 +2712,7 @@ for (n in c("RIM15","TOR1")){
           mutate(Variable=varz)
       
         dotplot(gse[[k]], showCategory=30)
-        ggsave(paste0("./GI_quiescence/sum/reviewer/",j,"_",i,"_",k,".pdf"), width = 20, height = 7)
+        ggsave(paste0("./GI_quiescence/sum/reviewer/",j,"_",i,"_",k,".pdf"), width = 8, height = 7)
       }
       go_ancova[[paste0(j,"_",i,"_ancova")]] <- gseGOResults$ancova %>% dplyr::select(ID)
       go_add[[paste0(j,"_",i,"_add")]] <- gseGOResults$add %>% dplyr::select(ID)
@@ -2331,7 +2743,7 @@ ggcorrplot(mgoSim_table,  method = "square", hc.method = "complete",
            hc.order = FALSE, outline.col = "white",
            colors = c("#5959F7", "white", "#FF0000"), type = "full") +
   ggtitle("Sematic similarity among GO terms")
-ggsave("./GI_quiescence/sum/reviewer/Goterms_simi_GIS_models", width = 8, height = 8)
+ggsave("./GI_quiescence/sum/reviewer/Goterms_simi_GIS_models.pdf", width = 8, height = 8)
 
 ```
 
@@ -2653,7 +3065,6 @@ Sun_fitness_p <- inner_join(inner_join(Sun_fitness %>% filter(GrowStage == "Pro"
   dplyr::rename(fitness_Costanzo = `Double mutant fitness`)
 ```
 
-
 #making comparison plots for FigureEV5
 ```{r}
 ##carbon restriction
@@ -2933,7 +3344,7 @@ GI_stages %>%
 ###FigureS4A & S4B & S4C
 ```{r}
 #read in the table
-GI_VST_all_wtNormed<-read_csv("./GI_quiescence/sum/tables/TableS13.csv")[,-1]
+GI_VST_all_wtNormed<-read_csv("./sum/tables/TableS13.csv")[,-1]
 
 #GI_VST_all <- left_join(GI_VST_all_wtNormed, YtoGene, by ="Strain")
 
@@ -3241,7 +3652,7 @@ ggpairs(GI_reshape_qui_cor[, 5:7],
         upper = list(continuous = wrap("cor", alpha = 1), combo = "box_no_facet"),
         lower = list(continuous = wrap("points", alpha = 0.3), combo = wrap("dot_no_facet", alpha = 0.2, size = 0.5, col = "pink"))
        # title = "GI profile comparison for quiescent cells starved fro nitrogen"
-       )+
+       )+ 
   theme_classic()
 dev.off()
 
@@ -3389,7 +3800,7 @@ for (n in c("carbon","nitrogen","phosphate")){
 
 ##Functional annotation of significantly interacting genes in quiescence
 ```{r,dataToAnalyze,cache=T,message=F,warning=F}
-GI_VST_all_wtNormed<-read_csv("./GI_quiescence/sum/tables/TableS13.csv")[,-1]
+GI_VST_all_wtNormed<-read_csv("./sum/tables/TableS13.csv")[,-1]
 
 GI_VST_all <- left_join(GI_VST_all_wtNormed, YtoGene, by ="Strain")
 
@@ -3447,23 +3858,208 @@ formula_res_all <- compareCluster(Entrez~condtion, data=enrichGO_pos[[var]],
                               OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,
                               ont="ALL", fun="enrichGO", pvalueCutoff=0.05)
 
-
 #make a plot using clusterprofiler buildin function
 dotplot(formula_res_all) + 
   ggplot2::theme(axis.text.x=element_text(angle=90),legend.position="bottom") +
   ggplot2::ggtitle(var)
-ggsave(paste0("./GI_quiescence/sum/GIS analysis/",var,"/formula_res_pos.pdf"), width=10,height=8)
+ggsave(paste0("./sum/GIS analysis/",var,"/formula_res_pos.pdf"), width=10,height=8)
 
 formula_res_all[,] %>% 
-  write_csv(paste0("./GI_quiescence/sum/GIS analysis/",var,"/formula_res_all_pos.csv"))
+  write_csv(paste0("./sum/GIS analysis/",var,"/formula_res_all_pos.csv"))
 
 formula_res_all_neg[,] %>% 
-  write_csv(paste0("./GI_quiescence/sum/GIS analysis/",var,"/formula_res_all_neg.csv"))
+  write_csv(paste0("./sum/GIS analysis/",var,"/formula_res_all_neg.csv"))
 }
 
 #not the warning is indicating that no enrichment were fond in any of the gene cluster that show significant interaction with PHO85. If eliminating PHO85 in the var variable, the code should run smoothly.
 ```
 
+#GO term enrichment for Significant interactions
+```{r}
+GI_VST_all_wtNormed<-read_csv("./sum/tables/TableS13.csv")[,-1]
+
+pos_int <- GI_VST_all_wtNormed %>% filter (estimate > 0 & q.value < 0.05) %>%
+  unite(condition, nutrient, GrowStage) %>%
+  dplyr::select(condition, Strain, LibraryName, estimate) %>%
+  dplyr::rename(Systematic = Strain, ancova.gis = estimate) %>% 
+    spread(key = condition , value = ancova.gis) 
+
+neg_int <- GI_VST_all_wtNormed %>% filter (estimate < 0 & q.value < 0.05) %>%
+  unite(condition, nutrient, GrowStage) %>%
+  dplyr::select(condition, Strain, LibraryName, estimate) %>%
+  dplyr::rename(Systematic = Strain, ancova.gis = estimate) %>% 
+  spread(key = condition , value = ancova.gis)
+
+#compare GO for positive interactions
+enrichGO_pos<-list()
+enrichGO_neg<-list()
+for (var in c("RIM15","TOR1","PHO85")){
+  #Proliferating cell
+  var = "RIM15"
+    C_pro_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, carbon_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "C_Qui") #%>% pull(ENTREZID)
+    
+    N_pro_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, nitrogen_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "N_Qui") #%>% pull(ENTREZID)
+    
+    P_pro_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, phosphate_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "P_Qui") #%>% pull(ENTREZID)
+        
+   enrichGO_pos_pro <- bind_rows(C_pro_list,N_pro_list,P_pro_list) %>% drop_na()
+  
+  #Quiescent cell
+    C_qui_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, carbon_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "C_Qui") #%>% pull(ENTREZID)
+    
+    N_qui_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, nitrogen_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "N_Qui") #%>% pull(ENTREZID)
+    
+    P_qui_list <- pos_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, phosphate_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "P_Qui") #%>% pull(ENTREZID)
+    enrichGO_pos[[var]] <- bind_rows(C_qui_list,N_qui_list,P_qui_list,enrichGO_pos_pro) %>% drop_na()
+    #tmp <- clusterProfiler::enrichGO(gene_list, 
+     #                                ont ="ALL",
+      #                               OrgDb = "org.Sc.sgd.db", 
+       #                              keyType = "ENSEMBL", 
+        #                             pvalueCutoff = 0.05, 
+         #                            pAdjustMethod = "BH", 
+          #                           universe, 
+           #                          qvalueCutoff = 0.2, 
+            #                         minGSSize = 10, 
+             #                        maxGSSize = 500, 
+              #                       readable = FALSE)
+              
+    formula_res_pos_all <- compareCluster(ENTREZID~condition, data=enrichGO_pos[[var]], 
+                              OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,
+                              ont="ALL", fun="enrichGO", pvalueCutoff=0.05, pAdjustMethod = "fdr")
+  
+dotplot(formula_res_pos_all) + 
+  ggplot2::theme(axis.text.x=element_text(angle=90),legend.position="bottom") +
+  ggplot2::ggtitle(var)
+ggsave(paste0("./sum/GIS analysis/",var,"/formula_res_pos.pdf"), width=10,height=8)
+
+formula_res_pos_all[,] %>% 
+  write_csv(paste0("./sum/GIS analysis/",var,"/formula_res_all_pos.csv"))
+
+#compare GO for positive interactions
+  #Proliferating cell
+    C_pro_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, carbon_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "C_Qui") #%>% pull(ENTREZID)
+    
+    N_pro_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, nitrogen_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "N_Qui") #%>% pull(ENTREZID)
+    
+    P_pro_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, phosphate_Pro) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "P_Qui") #%>% pull(ENTREZID)
+        
+   enrichGO_neg_pro <- bind_rows(C_pro_list,N_pro_list,P_pro_list) %>% drop_na()
+  
+  #Quiescent cell
+    C_qui_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, carbon_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "C_Qui") #%>% pull(ENTREZID)
+    
+    N_qui_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, nitrogen_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "N_Qui") #%>% pull(ENTREZID)
+    
+    P_qui_list <- neg_int %>% dplyr::filter(LibraryName == var) %>%
+          dplyr::select(Systematic, phosphate_Qui) %>% drop_na() %>% 
+  {clusterProfiler::bitr(.$Systematic, fromType="ENSEMBL", toType="ENTREZID"
+    ,OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,drop=T)} %>% 
+      dplyr::select(ENTREZID) %>% mutate(condition = "P_Qui") #%>% pull(ENTREZID)
+    enrichGO_neg[[var]] <- bind_rows(C_qui_list,N_qui_list,P_qui_list,enrichGO_neg_pro) %>% drop_na()
+              
+    formula_res_neg_all <- compareCluster(ENTREZID~condition, data=enrichGO_neg[[var]], 
+                              OrgDb=org.Sc.sgd.db::org.Sc.sgd.db,
+                              ont="ALL", fun="enrichGO", pvalueCutoff=0.05, pAdjustMethod = "fdr")
+  
+dotplot(formula_res_neg_all) + 
+  ggplot2::theme(axis.text.x=element_text(angle=90),legend.position="bottom") +
+  ggplot2::ggtitle(var)
+ggsave(paste0("./sum/GIS analysis/",var,"/formula_res_all_neg.pdf"), width=10,height=8)
+
+formula_res_neg_all[,] %>% 
+  write_csv(paste0("./sum/GIS analysis/",var,"/formula_res_all_neg.csv"))
+}
+```
+
+#GSEA for Significant interactions
+```{r}
+int <- GI_VST_all_wtNormed %>% filter (q.value < 0.05) %>%
+  unite(condition, nutrient, GrowStage) %>%
+  dplyr::select(condition, Strain, LibraryName, estimate) %>%
+  dplyr::rename(Systematic = Strain, ancova.gis = estimate) %>% 
+    spread(key = condition , value = ancova.gis) 
+
+#compare GO for positive interactions
+gseGOResults <- list() 
+gseGOtable <- ""
+for (var in c("RIM15","TOR1","PHO85")){
+  for (varz in c("carbon_Pro", "carbon_Qui", "nitrogen_Pro","nitrogen_Qui", "phosphate_Pro", "phosphate_Qui")){
+    # we want the fitness and suvival rate
+    original_gene_list <- int %>% dplyr::filter(LibraryName == var) %>% dplyr::select(Systematic, varz) %>% drop_na() %>% pull(varz)
+    # name the vector
+    names(original_gene_list) <- int %>% dplyr::filter(LibraryName == var) %>% dplyr::select(Systematic, varz) %>% drop_na() %>% pull(Systematic)
+    # sort the list in decreasing order (required for clusterProfiler)
+    gene_list = sort(original_gene_list, decreasing = TRUE)
+    tmp <- clusterProfiler::gseGO(geneList=gene_list, 
+             ont ="CC", 
+             keyType = "ENSEMBL", 
+             nPerm = 10000, 
+             minGSSize = 2, 
+             maxGSSize = length(gene_list)-1, 
+             pvalueCutoff = 0.05, 
+             verbose = TRUE, 
+             OrgDb = "org.Sc.sgd.db", 
+             pAdjustMethod = "none")
+    
+    tmp2 <- simplify(tmp, cutoff=0.4, by="p.adjust", select_fun=min)
+    
+    gseGOResults[[varz]] <- tmp2@result %>% 
+      as_tibble() %>% 
+      mutate(Variable=varz, Library = var)
+      }
+  gseGOtable <- bind_rows(gseGOResults) %>% as_tibble %>% 
+    # First we bind rows and make it a tibble
+    dplyr::select(Variable,ID,Description, setSize, enrichmentScore, NES, p.adjust,rank, pvalue, core_enrichment) %>%
+    # Then we pick the variables we want
+    arrange(Variable,-enrichmentScore)
+  
+gseGOtable %>% write_csv(paste0("./sum/GIS analysis/",var,"/gsea_sig_CC.csv"), append=T, col_names = T)
+}
+```
 ###Figure 6A
 ```{r}
 # read in Go term output from saved files
@@ -3689,9 +4285,9 @@ ggsave(paste0(path,"FigS6B.pdf"), width=9,height=5)
 ```{r, catch =F, eval = FALSE}
 #note: this step requires a lot computational memory, suggest to run it on HPC
 path = "./GI_quiescence/sum/plot/"
-GI_VST_all_wtNormed<-read_csv("./GI_quiescence/sum/GIS analysis/TableS13.csv")[,-1]
+GI_VST_all_wtNormed<-read_csv("./sum/GIS analysis/TableS13.csv")[,-1]
 
-YtoGene <- read.table("./GI_quiescence/sum/data/YORFtoGENE_2018")
+YtoGene <- read.table("./sum/data/YORFtoGENE_2018")
 colnames(YtoGene) <- c("Strain","Gene")
 
 GI_VST_all <- left_join(GI_VST_all_wtNormed, YtoGene, by ="Strain")
